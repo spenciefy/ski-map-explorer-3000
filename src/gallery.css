@@ -283,3 +283,35 @@ body:not(.gallery-view) #scene .terrain-tooltip:not([hidden]){background:var(--p
 .rating-mark.circle i{border-radius:50%}.rating-mark.diamond i,.rating-mark.double-diamond i{transform:rotate(45deg);width:10px;height:10px}.rating-mark.unrated i{background:transparent;border:1px solid var(--rating-color);border-radius:50%}
 #route-card>.trail-rating{margin-top:4px;margin-bottom:6px}
 @media(max-width:760px){#route-card{border-radius:12px;padding:20px;bottom:16px;left:12px;right:12px;width:auto;max-height:40dvh;overflow:auto}#route-card h3{font-size:30px;line-height:1.1;margin:8px 32px 12px 0}#route-card p{font-size:13px}#close-route{min-width:44px;min-height:44px}.lift-label{padding:4px 6px;font-size:9px}}
+
+/* Quiet focus treatment, with a visible keyboard indicator. */
+button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
+button:focus-visible,a:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.collection-search input:focus,.collection-search input:focus-visible{outline:none;border-bottom-color:var(--ink);box-shadow:0 1px 0 var(--ink)}
+#globe-canvas{height:min(76dvh,850px);min-height:460px;border-radius:12px;background:radial-gradient(ellipse at center,#e4e9df60,transparent 70%)}
+.globe-marker{width:140px;max-width:140px;padding:0 6px 8px;border:0;border-radius:8px;background:#f5f5edef;box-shadow:0 3px 14px #293e3512;white-space:normal;overflow:visible;transition:box-shadow .15s}
+.globe-marker.is-cluster{min-width:0;max-width:140px;background:#f5f5edef;color:var(--ink);font-size:11px}
+.globe-marker:hover{outline:none;border:0;color:var(--ink);box-shadow:0 4px 20px #293e3530}
+.globe-marker:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.globe-marker-art{position:relative;display:block;height:90px;pointer-events:none}
+.globe-marker-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:3}
+.globe-marker-art img:nth-child(2){transform:translate(-8px,-5px) rotate(-12deg);z-index:2;opacity:1}
+.globe-marker-art img:nth-child(3){transform:translate(8px,-8px) rotate(12deg);z-index:1;opacity:1}
+.globe-marker-name{display:block;font:600 18px/1.1 'Barlow Condensed',sans-serif}
+.globe-marker-count{display:block;font-size:10px;font-weight:500;color:var(--muted);margin-top:4px}
+.globe-marker:after{content:'';position:absolute;bottom:-5px;left:calc(50% - 3px);width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.globe-navigation{position:absolute;z-index:3;right:16px;bottom:20px;display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:0 2px 12px #293e3510}
+.globe-navigation button{width:44px;height:44px;font-size:24px;line-height:1}
+.globe-hint{position:absolute;bottom:20px;left:16px;z-index:2;font-size:11px;color:var(--muted);pointer-events:none}
+#globe-card{z-index:4;top:64px;left:16px;width:320px;max-height:calc(100% - 160px);border-radius:12px;padding:32px 16px 16px;box-shadow:0 6px 32px #293e3520;border:1px solid var(--line)}
+.globe-group-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.globe-group-resort{border:0!important;min-width:0}
+#globe-card .globe-group-resort img{width:100%;aspect-ratio:720/520;object-fit:contain}
+#globe-card .globe-group-resort span{font-size:12px;line-height:1.4}
+@media(max-width:760px){
+ #globe-canvas{height:calc(100dvh - 240px);min-height:440px;margin-inline:-12px}
+ .globe-marker,.globe-marker.is-cluster{width:108px;max-width:108px}
+ .globe-marker-art{height:68px}.globe-marker-name{font-size:16px}.globe-marker-count{font-size:9px}
+ #globe-card{top:auto;bottom:40px;left:0;width:100%;max-height:44dvh}
+ .globe-hint{font-size:9px;left:8px;bottom:8px}.globe-navigation{right:8px;bottom:28px}
+}
