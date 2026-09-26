@@ -273,3 +273,13 @@ body:not(.gallery-view) #settings-toggle{min-height:44px;padding:0 18px;backgrou
 .rider-settings footer .rotation-hint{display:none}
 
 .map-source-credits{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:24px;padding-top:16px;border-top:1px solid #293e3525;font-size:10px;color:var(--muted)}.map-source-credits a{color:inherit;text-decoration:none}
+
+body:not(.gallery-view) #scene .terrain-tooltip:not([hidden]){background:var(--paper);color:var(--ink);padding:14px 16px;border:1px solid #293e3520;border-radius:10px;box-shadow:0 6px 24px #193b3420;max-width:min(340px,calc(100% - 16px));font-size:12px}
+.trail-hover-name{display:block;font:600 24px/1.1 'Barlow Condensed',sans-serif;margin-bottom:10px;overflow-wrap:anywhere}
+.trail-hover-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;color:var(--muted)}
+.trail-rating{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink)}
+.rating-mark{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:16px;height:20px;flex-shrink:0}
+.rating-mark i{display:block;width:12px;height:12px;background:var(--rating-color)}
+.rating-mark.circle i{border-radius:50%}.rating-mark.diamond i,.rating-mark.double-diamond i{transform:rotate(45deg);width:10px;height:10px}.rating-mark.unrated i{background:transparent;border:1px solid var(--rating-color);border-radius:50%}
+#route-card>.trail-rating{margin-top:4px;margin-bottom:6px}
+@media(max-width:760px){#route-card{border-radius:12px;padding:20px;bottom:16px;left:12px;right:12px;width:auto;max-height:40dvh;overflow:auto}#route-card h3{font-size:30px;line-height:1.1;margin:8px 32px 12px 0}#route-card p{font-size:13px}#close-route{min-width:44px;min-height:44px}.lift-label{padding:4px 6px;font-size:9px}}

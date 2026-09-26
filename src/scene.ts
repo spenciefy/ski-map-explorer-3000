@@ -1,3 +1,4 @@
+import { trailHoverMarkup } from './trail-rating';
 import { liftPalette } from './resort-identity';
 import { loadMountain } from './mountain-cache';
 import { Line2 } from 'three/addons/lines/Line2.js';
@@ -59,8 +60,8 @@ export class AtlasScene {
   this.raycaster.params.Line={threshold:.7};this.renderer.domElement.addEventListener('pointerdown',e=>{if(!this.touchPointers.size)this.suppressPick=false;this.touchPointers.add(e.pointerId);if(this.touchPointers.size>1)this.suppressPick=true;this.down={x:e.clientX,y:e.clientY};});
   for(const type of ['pointerup','pointercancel'])this.renderer.domElement.addEventListener(type,e=>{this.touchPointers.delete((e as PointerEvent).pointerId);});
   this.renderer.domElement.addEventListener('pointermove',e=>{if(e.buttons&&Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>5)this.suppressPick=true;});
-  this.renderer.domElement.addEventListener('click',e=>{if(this.suppressPick||Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>5)return;const f=this.pick(e);if(f)this.focusFeature(f.id);});
-  this.renderer.domElement.addEventListener('pointermove',e=>{if(e.buttons)return;const f=this.pick(e);this.tooltip.hidden=!f;if(f){this.tooltip.textContent=`${f.kind==='lift'?'↟':'↘'} ${featureHoverText(f)}`;const rect=host.getBoundingClientRect();this.tooltip.style.left=`${Math.max(8,Math.min(e.clientX-rect.left+15,rect.width-this.tooltip.offsetWidth-8))}px`;this.tooltip.style.top=`${Math.max(8,Math.min(e.clientY-rect.top-this.tooltip.offsetHeight-12,rect.height-this.tooltip.offsetHeight-8))}px`;}this.host.style.cursor=f?'pointer':'grab';});
+  this.renderer.domElement.addEventListener('click',e=>{if(this.suppressPick||Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>5)return;const f=this.pick(e);if(f)this.focusFeature(f.id,false);});
+  this.renderer.domElement.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')return;const f=this.pick(e);this.tooltip.hidden=!f;if(f)this.showFeatureTooltip(f,e.clientX,e.clientY);this.host.style.cursor=f?'pointer':'grab';});
   this.renderer.domElement.addEventListener('pointerleave',()=>this.tooltip.hidden=true);
   this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(host);this.resize();this.animate();
  }
@@ -217,14 +218,31 @@ export class AtlasScene {
   for(const p of d.peaks.filter(p=>inExtent(d,p.point)).slice(0,20)){const el=document.createElement('button');el.className='geo-label peak-label';el.textContent=`△ ${p.name}`;el.title=`${p.name} · ${Math.round(elevationAt(d,...p.point)).toLocaleString()} m (DEM)`;el.onclick=()=>{const point=this.project(p.point);this.flyTo(point,55);};this.labelHost.append(el);this.labels.push({el,point:this.project(p.point,1.5),peak:true,priority:4});}
   const longest=[...this.routes].filter(r=>r.feature.name&&!r.feature.area).sort((a,b)=>b.length-a.length);const seen=new Set<string>();
   for(const route of longest){const f=route.feature;const lift=f.kind==='lift',key=lift?'lift:'+f.id:'trail:'+f.name;if(seen.has(key))continue;seen.add(key);if(!lift&&this.labels.filter(l=>l.feature?.kind==='trail').length>=26)continue;
-   const el=document.createElement('button');el.className=`geo-label ${lift?'lift-label':'trail-label'}`;el.dataset.feature=String(f.id);el.textContent=`${lift?'↟ ':this.selected==='iwanai'?'Course ':''}${f.name}${f.retired?' · retired':f.access==='private'?' · private':f.proposed?' · proposed':''}`;el.title=featureHoverText(f);el.setAttribute('aria-label',`Explore ${f.kind} ${featureHoverText(f)}`);el.onclick=()=>this.focusFeature(f.id);el.style.setProperty('--route-color',`#${(lift?0xb54c37:trailColor(this.selected,f.difficulty)).toString(16).padStart(6,'0')}`);this.labelHost.append(el);this.labels.push({el,point:route.curve.getPoint(.58).add(new THREE.Vector3(0,.7,0)),feature:f,priority:lift?12:1});
+   const el=document.createElement('button');el.className=`geo-label ${lift?'lift-label':'trail-label'}`;el.dataset.feature=String(f.id);el.textContent=`${lift?'↟ ':this.selected==='iwanai'?'Course ':''}${f.name}${f.retired?' · retired':f.access==='private'?' · private':f.proposed?' · proposed':''}`;el.addEventListener('pointerenter',e=>{if(e.pointerType!=='touch')this.showFeatureTooltip(f,e.clientX,e.clientY);});el.addEventListener('pointerleave',()=>this.tooltip.hidden=true);el.setAttribute('aria-label',`Explore ${f.kind} ${featureHoverText(f)}`);el.onclick=()=>this.focusFeature(f.id,false);el.style.setProperty('--route-color',`#${(lift?0xb54c37:trailColor(this.selected,f.difficulty)).toString(16).padStart(6,'0')}`);this.labelHost.append(el);this.labels.push({el,point:route.curve.getPoint(.58).add(new THREE.Vector3(0,.7,0)),feature:f,priority:lift?12:1});
   }
  }
- pick(e:PointerEvent|MouseEvent){const r=this.renderer.domElement.getBoundingClientRect();this.pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);this.raycaster.setFromCamera(this.pointer,this.camera);const candidates=this.routes.filter(r=>(r.feature.kind==='lift'?this.showLifts:this.showTrails));const hit=this.raycaster.intersectObjects(candidates.map(r=>r.line),false)[0];return hit?.object.userData.feature as MapFeature|undefined;}
- focusFeature(id:number){const route=this.routes.find(r=>r.feature.id===id);if(!route)return;this.selectedFeature=route.feature;this.journey=undefined;this.traveler.visible=false;
+ showFeatureTooltip(f:MapFeature,x:number,y:number){
+  this.tooltip.innerHTML=trailHoverMarkup(this.selected,f);this.tooltip.hidden=false;
+  const r=this.host.getBoundingClientRect();this.tooltip.style.left=`${Math.max(8,Math.min(x-r.left+16,r.width-this.tooltip.offsetWidth-8))}px`;this.tooltip.style.top=`${Math.max(8,Math.min(y-r.top-this.tooltip.offsetHeight-16,r.height-this.tooltip.offsetHeight-8))}px`;
+ }
+ pick(e:PointerEvent|MouseEvent){
+  const r=this.renderer.domElement.getBoundingClientRect(),touch=('pointerType' in e&&e.pointerType==='touch')||this.mobile;
+  this.pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);this.raycaster.setFromCamera(this.pointer,this.camera);
+  const radius=touch?22:10;
+  (this.raycaster.params as unknown as Record<string,{threshold:number}>).Line2={threshold:radius*2};
+  this.raycaster.params.Line.threshold=radius*2*this.camera.position.distanceTo(this.controls.target)*Math.tan(THREE.MathUtils.degToRad(this.camera.fov/2))/r.height;
+  const candidates=this.routes.filter(route=>route.feature.kind==='lift'?this.showLifts:this.showTrails);
+  const hits=this.raycaster.intersectObjects(candidates.map(route=>route.line),false);
+  // Prefer the closest line on screen, not the lift that is nearest the camera.
+  const distance=(hit:THREE.Intersection)=>{const point=((hit as THREE.Intersection & {pointOnLine?:THREE.Vector3}).pointOnLine||hit.point).clone().project(this.camera);return Math.hypot((point.x-this.pointer.x)*r.width/2,(point.y-this.pointer.y)*r.height/2);};
+  hits.sort((a,b)=>distance(a)-distance(b));
+  return hits.find(hit=>distance(hit)<=radius)?.object.userData.feature as MapFeature|undefined;
+ }
+
+ focusFeature(id:number,fly=true){this.tooltip.hidden=true;const route=this.routes.find(r=>r.feature.id===id);if(!route)return;this.selectedFeature=route.feature;this.journey=undefined;this.traveler.visible=false;
   if(this.highlight){this.world.remove(this.highlight);this.highlight.geometry.dispose();(this.highlight.material as THREE.Material).dispose();}
   this.highlight=new THREE.Line(new THREE.BufferGeometry().setFromPoints(route.points.map(p=>p.clone().add(new THREE.Vector3(0,.2,0)))),new THREE.LineBasicMaterial({color:0xe88630,depthTest:false,transparent:true,opacity:1}));this.highlight.renderOrder=10;this.world.add(this.highlight);
-  this.labels.forEach(l=>l.el.classList.toggle('chosen',l.feature?.id===id));this.flyTo(route.curve.getPoint(.5),Math.max(40,route.length*1.8));window.dispatchEvent(new CustomEvent('feature-selected',{detail:route.feature}));
+  this.labels.forEach(l=>l.el.classList.toggle('chosen',l.feature?.id===id));if(fly)this.flyTo(route.curve.getPoint(.5),Math.max(40,route.length*1.8));window.dispatchEvent(new CustomEvent('feature-selected',{detail:route.feature}));
  }
  followSelected(){const route=this.routes.find(r=>r.feature.id===this.selectedFeature?.id);if(!route)return;this.journey={route,start:this.elapsed};this.traveler.visible=false;this.targetCamera=null;this.targetLook=null;}
  flyTo(point:THREE.Vector3,distance:number){const dir=this.camera.position.clone().sub(this.controls.target).normalize();this.targetLook=point.clone();this.targetCamera=point.clone().add(dir.multiplyScalar(Math.min(distance,260)));}
@@ -263,7 +281,7 @@ export class AtlasScene {
   this.snow.visible=this.showSnow&&!this.aerial;if(moving&&this.snowfall>0){for(let i=0;i<this.snowPositions.length;i+=3){this.snowPositions[i]+=delta*this.wind*.07;this.snowPositions[i+1]-=delta*3;if(this.snowPositions[i+1]<0)this.snowPositions[i+1]=140;if(this.snowPositions[i]>135)this.snowPositions[i]=-135;}this.snow.geometry.attributes.position.needsUpdate=true;}
   if(labelsChanged){const w=this.host.clientWidth,h=this.host.clientHeight,occupied:{x:number,y:number,width:number}[]=[];const distance=this.camera.position.distanceTo(this.controls.target);
   for(const label of [...this.labels].sort((a,b)=>(this.selectedFeature&&b.feature?.id===this.selectedFeature.id?20:b.priority)-(this.selectedFeature&&a.feature?.id===this.selectedFeature.id?20:a.priority))){const allowed=label.place ? this.showLabels&&this.showPlaces&&(label.place.kind==='lodge'||distance<180) : label.road ? this.showRoads&&this.showLabels : (label.feature?.kind==='lift'?this.showLifts:(this.showLabels||(this.selected==='iwanai'&&label.feature?.kind==='trail'))&&(label.feature?.kind==='trail'?this.showTrails:true))&&(!label.feature||label.feature.kind==='lift'||this.selected==='iwanai'||distance<190||label.feature.id===this.selectedFeature?.id);
-   this.temp.copy(label.point).project(this.camera);const x=(this.temp.x*.5+.5)*w;let y=(-this.temp.y*.5+.5)*h;const originalY=y;const width=Math.min(190,label.el.textContent!.length*(this.mobile?4:5.3)+16);const collides=()=>occupied.some(o=>Math.abs(o.x-x)<(o.width+width)/2+5&&Math.abs(o.y-y)<23);if(label.feature?.kind==='lift'||(this.selected==='iwanai'&&label.feature?.kind==='trail')||label.place?.kind==='lodge'){for(let tries=0;tries<3&&collides();tries++)y-=26;}const collision=collides();label.el.style.setProperty('--leader',`${originalY-y}px`);const visible=allowed&&!collision&&this.temp.z<1&&x>35&&x<w-35&&y>30&&y<h-25&&this.world.visible;
+   this.temp.copy(label.point).project(this.camera);const x=(this.temp.x*.5+.5)*w;let y=(-this.temp.y*.5+.5)*h;if(this.mobile&&label.feature?.kind==='lift'){const ground=label.point.clone();ground.y=this.height(ground.x,ground.z)+.2;ground.project(this.camera);y=(-ground.y*.5+.5)*h;}const originalY=y;const width=Math.min(190,label.el.textContent!.length*(this.mobile?4:5.3)+16);const collides=()=>occupied.some(o=>Math.abs(o.x-x)<(o.width+width)/2+5&&Math.abs(o.y-y)<23);if(label.feature?.kind==='lift'||(this.selected==='iwanai'&&label.feature?.kind==='trail')||label.place?.kind==='lodge'){for(let tries=0;tries<(this.mobile?1:3)&&collides();tries++)y-=this.mobile?18:26;}const collision=collides();label.el.style.setProperty('--leader',`${originalY-y}px`);const visible=allowed&&!collision&&this.temp.z<1&&x>35&&x<w-35&&y>30&&y<h-25&&this.world.visible;
    label.el.hidden=!visible;if(visible){occupied.push({x,y,width});label.el.style.transform=`translate(${x}px,${y}px) translate(-50%,-100%)`;}}
   }
   this.renderer.render(this.scene,this.camera);
